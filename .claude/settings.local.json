@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ':*)",
+      "Bash(python -c ':*)",
+      "Bash(node -e ':*)",
+      "Bash(powershell -Command ':*)",
+      "Bash(npx shadcn@latest add card badge progress --yes)",
+      "Bash(npx shadcn@latest add select alert input --yes)"
+    ]
+  }
+}

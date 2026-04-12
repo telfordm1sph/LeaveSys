@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\General\AdminController;
 use App\Http\Controllers\General\ProfileController;
+use App\Http\Controllers\Leave\LeaveController;
+use App\Http\Controllers\Leave\LeaveFilingController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\AuthMiddleware;
 use Illuminate\Support\Facades\Route;
@@ -24,4 +26,11 @@ Route::prefix($app_name)->middleware(AuthMiddleware::class)->group(function () {
   Route::get("/", [DashboardController::class, 'index'])->name('dashboard');
   Route::get("/profile", [ProfileController::class, 'index'])->name('profile.index');
   Route::post("/change-password", [ProfileController::class, 'changePassword'])->name('changePassword');
+
+  // Leave routes
+  Route::prefix('leave')->name('leave.')->group(function () {
+    Route::get('/balances', [LeaveController::class,       'balances'])->name('balances');
+    Route::get('/file',     [LeaveFilingController::class, 'index'])->name('file');
+    Route::post('/file',    [LeaveFilingController::class, 'store'])->name('file.store');
+  });
 });
