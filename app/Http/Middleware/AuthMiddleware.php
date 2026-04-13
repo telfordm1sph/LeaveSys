@@ -116,6 +116,8 @@ class AuthMiddleware
             'emp_prodline_id'  => $currentUser->emp_prodline_id,
             'emp_position_id'  => $currentUser->emp_position_id,
             'emp_station_id'   => $currentUser->emp_station_id,
+            'shift_type'       => $currentUser->shift_type ?? null,
+            'team'             => $currentUser->team ?? null,
 
             'generated_at'   => $currentUser->generated_at,
         ]]);

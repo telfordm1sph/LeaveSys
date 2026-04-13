@@ -4,6 +4,11 @@ use App\Http\Controllers\General\AdminController;
 use App\Http\Controllers\General\ProfileController;
 use App\Http\Controllers\Leave\LeaveController;
 use App\Http\Controllers\Leave\LeaveFilingController;
+use App\Http\Controllers\Admin\LeavePolicyController;
+use App\Http\Controllers\Admin\VlAccrualTierController;
+use App\Http\Controllers\Admin\HolidayController;
+use App\Http\Controllers\Admin\YearEndConfigController;
+use App\Http\Controllers\Admin\EmployeeBalanceController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\AuthMiddleware;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +26,38 @@ Route::prefix($app_name)->middleware(AuthMiddleware::class)->group(function () {
     Route::post("/add-admin", [AdminController::class, 'addAdmin'])->name('addAdmin');
     Route::post("/remove-admin", [AdminController::class, 'removeAdmin'])->name('removeAdmin');
     Route::patch("/change-admin-role", [AdminController::class, 'changeAdminRole'])->name('changeAdminRole');
+
+    // ── Leave Management Admin ──────────────────────────────────────
+    Route::prefix('admin/leave')->name('admin.leave.')->group(function () {
+
+      // Leave Policy
+      Route::get('/policy',              [LeavePolicyController::class, 'index'])->name('policy');
+      Route::post('/policy',             [LeavePolicyController::class, 'store'])->name('policy.store');
+      Route::patch('/policy/{id}',       [LeavePolicyController::class, 'update'])->name('policy.update');
+      Route::patch('/policy/{id}/toggle',[LeavePolicyController::class, 'toggleActive'])->name('policy.toggle');
+
+      // VL Accrual Tiers
+      Route::get('/accrual-tiers',       [VlAccrualTierController::class, 'index'])->name('accrual-tiers');
+      Route::post('/accrual-tiers',      [VlAccrualTierController::class, 'store'])->name('accrual-tiers.store');
+      Route::patch('/accrual-tiers/{id}',[VlAccrualTierController::class, 'update'])->name('accrual-tiers.update');
+      Route::delete('/accrual-tiers/{id}',[VlAccrualTierController::class, 'destroy'])->name('accrual-tiers.destroy');
+
+      // Holidays
+      Route::get('/holidays',            [HolidayController::class, 'index'])->name('holidays');
+      Route::post('/holidays',           [HolidayController::class, 'store'])->name('holidays.store');
+      Route::patch('/holidays/{id}',     [HolidayController::class, 'update'])->name('holidays.update');
+      Route::delete('/holidays/{id}',    [HolidayController::class, 'destroy'])->name('holidays.destroy');
+
+      // Year-End Config
+      Route::get('/year-end',            [YearEndConfigController::class, 'index'])->name('year-end');
+      Route::post('/year-end',           [YearEndConfigController::class, 'store'])->name('year-end.store');
+      Route::patch('/year-end/{id}',     [YearEndConfigController::class, 'update'])->name('year-end.update');
+      Route::get('/year-end/{id}/logs',  [YearEndConfigController::class, 'logs'])->name('year-end.logs');
+
+      // Employee Balances
+      Route::get('/balances',            [EmployeeBalanceController::class, 'index'])->name('balances');
+      Route::post('/balances/adjust',    [EmployeeBalanceController::class, 'adjust'])->name('balances.adjust');
+    });
   });
 
   Route::get("/", [DashboardController::class, 'index'])->name('dashboard');

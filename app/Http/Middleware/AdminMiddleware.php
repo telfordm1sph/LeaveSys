@@ -16,15 +16,17 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (session('emp_data')) {
-            $checkIfExists = DB::table('admin')
-                ->where('emp_id', session('emp_data')['emp_id'])
-                ->exists();
+        // Admin role filtering is disabled — all authenticated users can access admin routes.
+        // Re-enable the block below once the admin table is seeded.
 
-            if (!$checkIfExists) {
-                return redirect()->route('dashboard');
-            }
-        }
+        // if (session('emp_data')) {
+        //     $checkIfExists = DB::table('admin')
+        //         ->where('emp_id', session('emp_data')['emp_id'])
+        //         ->exists();
+        //     if (!$checkIfExists) {
+        //         return redirect()->route('dashboard');
+        //     }
+        // }
 
         return $next($request);
     }

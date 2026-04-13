@@ -37,5 +37,8 @@ return [
     'internal' => [
         'key' => env('INTERNAL_API_KEY'),
     ],
-
+    'hris' => [
+        'url' => env('HRIS_API_URL'),
+        'key' => env('HRIS_API_KEY'),
+    ],
 ];
