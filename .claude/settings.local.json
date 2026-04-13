@@ -19,7 +19,9 @@
       "Bash(curl -s -H \"X-Internal-Key: hris-secret-123456\" \"http://127.0.0.1:8000/active\")",
       "Bash(curl -s -H \"X-Internal-Key: hris-secret-123456\" \"http://127.0.0.1:8000/api/employees/active\")",
       "Bash(curl -s \"http://127.0.0.1:8000/api/employees/active\" -H \"X-Internal-Key: $\\(grep HRIS_KEY /c/Users/telford.programmer/Desktop/LeaveSys/.env)",
-      "Bash(curl -s \"http://127.0.0.1:8000/api/employees/active\" -H \"X-Internal-Key: hris-secret-123456\")"
+      "Bash(curl -s \"http://127.0.0.1:8000/api/employees/active\" -H \"X-Internal-Key: hris-secret-123456\")",
+      "Bash(curl -s \"http://127.0.0.1:8000/api/employees/operation-director\" -H \"X-Internal-Key: hris-secret-123456\")",
+      "Bash(curl -s \"http://127.0.0.1:8000/api/employees/1705/work\" -H \"X-Internal-Key: hris-secret-123456\")"
     ]
   }
 }

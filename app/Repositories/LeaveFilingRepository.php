@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\EmployeeLeaveBalance;
 use App\Models\LeaveAccrualLog;
+use App\Models\LeaveApprover;
 use App\Models\LeaveRequest;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -73,6 +74,44 @@ class LeaveFilingRepository
     public function createRequest(array $data): LeaveRequest
     {
         return LeaveRequest::create($data);
+    }
+
+    /**
+     * Insert an approver row for a leave request.
+     */
+    public function createApprover(array $data): void
+    {
+        LeaveApprover::create($data);
+    }
+
+    /**
+     * Refund the deducted balance when a leave is rejected, and log it.
+     */
+    public function refundBalance(LeaveRequest $request): void
+    {
+        $balance = EmployeeLeaveBalance::where('employid', $request->employid)
+            ->where('leave_type', $request->leave_type)
+            ->first();
+
+        if (!$balance) return;
+
+        $before = $balance->balance_minutes;
+        $after  = $before + $request->deduction_minutes;
+
+        $balance->balance_minutes = $after;
+        $balance->save();
+
+        LeaveAccrualLog::create([
+            'employid'         => $request->employid,
+            'leave_type'       => $request->leave_type,
+            'action_type'      => 'adjustment',
+            'minutes_before'   => $before,
+            'minutes_delta'    => $request->deduction_minutes,
+            'minutes_after'    => $after,
+            'leave_request_id' => $request->id,
+            'remarks'          => "Leave #{$request->id} rejected — balance refunded",
+            'triggered_by'     => 'system',
+        ]);
     }
 
     /**

@@ -110,6 +110,57 @@ class HrisApiService
     }
 
     /**
+     * Fetch approver IDs for an employee from HRIS work details.
+     * Returns [approver1_id, approver1_name, approver2_id, approver2_name] or null.
+     */
+    public function fetchApprovers(int $employid): ?array
+    {
+        try {
+            $response = Http::withHeaders([
+                'X-Internal-Key' => $this->key,
+            ])->get("{$this->baseUrl}/api/employees/{$employid}/work");
+
+            if ($response->failed()) return null;
+
+            $approver = $response->json('data.approver');
+            if (!$approver) return null;
+
+            return [
+                'approver1_id'   => (int) ($approver['approver1_id'] ?? 0),
+                'approver1_name' => $approver['approver1'] ?? null,
+                'approver2_id'   => (int) ($approver['approver2_id'] ?? 0),
+                'approver2_name' => $approver['approver2'] ?? null,
+            ];
+        } catch (\Exception $e) {
+            Log::error("HRIS fetchApprovers exception: {$e->getMessage()}", ['employid' => $employid]);
+            return null;
+        }
+    }
+
+    /**
+     * Fetch the Operation Director from HRIS.
+     * Returns ['emp_id' => int, 'name' => string] or null.
+     */
+    public function fetchOperationDirector(): ?array
+    {
+        try {
+            $response = Http::withHeaders([
+                'X-Internal-Key' => $this->key,
+            ])->get("{$this->baseUrl}/api/employees/operation-director");
+
+            if ($response->failed()) return null;
+
+            $data = $response->json('data');
+            if (empty($data['emp_id'])) return null;
+
+            return ['emp_id' => (int) $data['emp_id'], 'name' => $data['name'] ?? null];
+        } catch (\Exception $e) {
+            Log::error("HRIS fetchOperationDirector exception: {$e->getMessage()}");
+            return null;
+        }
+    }
+
+    /**
      * Fetch a paginated/filtered list of active employees for UI comboboxes.
      * Passes search + pagination params to HRIS (if supported); falls back
      * to returning an empty list on failure.

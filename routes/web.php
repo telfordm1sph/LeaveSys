@@ -12,6 +12,10 @@ require __DIR__ . '/auth.php';
 // General routes
 require __DIR__ . '/general.php';
 
+require __DIR__ . '/admin.php';
+
+require __DIR__ . '/leave.php';
+
 Route::get("/demo", [DemoController::class, 'index'])->name('demo');
 
 Route::fallback(function () {

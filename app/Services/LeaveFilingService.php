@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Repositories\LeaveFilingRepository;
+use App\Services\HrisApiService;
 use Carbon\Carbon;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class LeaveFilingService
@@ -18,7 +20,8 @@ class LeaveFilingService
     private const HR_VERIFICATION_TYPES   = ['MATERNITY'];
 
     public function __construct(
-        protected LeaveFilingRepository $repo
+        protected LeaveFilingRepository $repo,
+        protected HrisApiService $hris,
     ) {}
 
     // ─── Form data ────────────────────────────────────────────────────────────
@@ -90,6 +93,54 @@ class LeaveFilingService
     public function resolveLeaveStatus(int $positionId, string $leaveType): string
     {
         return $positionId === self::AUTO_APPROVE_POSITION ? 'approved' : 'pending';
+    }
+
+    // ─── Approver chain ───────────────────────────────────────────────────────
+
+    private function createApprovers(int $requestId, int $employid, bool $needsOD): void
+    {
+        try {
+            $approvers = $this->hris->fetchApprovers($employid);
+            if (!$approvers || !$approvers['approver1_id']) {
+                Log::warning('LeaveFilingService: no approver data for employee', [
+                    'leave_request_id' => $requestId,
+                    'employid'         => $employid,
+                ]);
+                return;
+            }
+
+            $this->repo->createApprover([
+                'leave_request_id'  => $requestId,
+                'approver_employid' => $approvers['approver1_id'],
+                'approver_level'    => 1,
+                'status'            => 'pending',
+            ]);
+
+            if ($approvers['approver2_id']) {
+                $this->repo->createApprover([
+                    'leave_request_id'  => $requestId,
+                    'approver_employid' => $approvers['approver2_id'],
+                    'approver_level'    => 2,
+                    'status'            => 'pending',
+                ]);
+            }
+
+            if ($needsOD) {
+                $od = $this->hris->fetchOperationDirector();
+                if ($od) {
+                    $this->repo->createApprover([
+                        'leave_request_id'  => $requestId,
+                        'approver_employid' => $od['emp_id'],
+                        'approver_level'    => 3,
+                        'status'            => 'pending',
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error("LeaveFilingService createApprovers exception: {$e->getMessage()}", [
+                'leave_request_id' => $requestId,
+            ]);
+        }
     }
 
     // ─── File storage ─────────────────────────────────────────────────────────
@@ -213,6 +264,11 @@ class LeaveFilingService
 
             return $request;
         });
+
+        // 8. Create approver chain (non-blocking — filing succeeds even if HRIS is down)
+        if ($positionId !== self::AUTO_APPROVE_POSITION) {
+            $this->createApprovers($leaveRequest->id, $employid, $requirements['require_appeal']);
+        }
 
         return [
             'status'        => 'filed',

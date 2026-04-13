@@ -31,9 +31,9 @@ class LeaveRequest extends Model
     ];
 
     protected $casts = [
-        'date_start'        => 'date',
-        'date_end'          => 'date',
-        'date_posted'       => 'date',
+        'date_start'        => 'date:Y-m-d',
+        'date_end'          => 'date:Y-m-d',
+        'date_posted'       => 'date:Y-m-d',
         'hours_per_day'     => 'integer',
         'working_days'      => 'integer',
         'deduction_minutes' => 'integer',

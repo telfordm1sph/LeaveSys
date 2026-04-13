@@ -5,7 +5,7 @@ import { usePage } from "@inertiajs/react";
 
 export default function AuthenticatedLayout({ children }) {
     const { emp_data } = usePage().props;
-
+    console.log(usePage().props);
     if (!emp_data) {
         return <LoadingScreen text="Loading user data..." />;
     }

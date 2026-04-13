@@ -20,6 +20,8 @@ class LeaveApprover extends Model
         'decided_at',
     ];
 
+    // Approver names are resolved from HRIS on demand (not stored in DB).
+
     protected $casts = [
         'leave_request_id'  => 'integer',
         'approver_employid' => 'integer',
