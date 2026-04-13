@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\Admin\EmployeeBalanceService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,12 +18,36 @@ class EmployeeBalanceController extends Controller
 
     public function index(Request $request): Response
     {
-        $employid = $request->query('employid') ? (int) $request->query('employid') : null;
-        $data     = $employid ? $this->service->getForEmployee($employid) : null;
+        $employid = $request->query('employid')
+            ? (int) $request->query('employid')
+            : (int) session('emp_data.emp_id');
+
+        $data = $employid ? $this->service->getForEmployee($employid) : null;
 
         return Inertia::render('Admin/EmployeeBalance/Index', [
             'employid' => $employid,
             'employee' => $data,
+        ]);
+    }
+
+    public function employees(Request $request): JsonResponse
+    {
+        $search = (string) ($request->query('search') ?? '');
+        $page   = max(1, (int) ($request->query('page') ?? 1));
+        $result = $this->service->getEmployeesForCombobox($search, $page);
+        return response()->json($result);
+    }
+
+    public function logs(Request $request, int $employid): Response
+    {
+        $data = $this->service->getLogsPage($employid, $request->query('leave_type'));
+
+        return Inertia::render('Admin/EmployeeBalance/Logs', [
+            'employid'   => $employid,
+            'name'       => $data['name'],
+            'logs'       => $data['logs'],
+            'leaveTypes' => $data['leaveTypes'],
+            'filterType' => $request->query('leave_type', ''),
         ]);
     }
 

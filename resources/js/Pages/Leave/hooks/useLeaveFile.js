@@ -14,7 +14,8 @@ export function useLeaveFile(balances, holidaySet) {
         leave_type:       "",
         date_start:       "",
         date_end:         "",
-        hours_per_day:    "8",
+        duration:         "whole",  // 'whole' | 'half'
+        hours_per_day:    "8",      // 8 | 10 | 12 — only applies when duration = 'whole'
         reason:           "",
         appeal_reason:    "",
         appeal_files:     [],
@@ -31,7 +32,9 @@ export function useLeaveFile(balances, holidaySet) {
         [data.date_start, data.date_end, holidaySet, skipWeekends],
     );
 
-    const dedMin     = wDays * parseInt(data.hours_per_day, 10) * 60;
+    const hrsPerDay  = parseInt(data.hours_per_day, 10) || 8;
+    const minsPerDay = data.duration === "half" ? (hrsPerDay / 2) * 60 : hrsPerDay * 60;
+    const dedMin     = wDays * minsPerDay;
     const late       = isLateFiling(data.leave_type, data.date_start);
     const needAppeal = late && APPEAL_TYPES.includes(data.leave_type);
     const needAttach = ATTACHMENT_TYPES.includes(data.leave_type);
@@ -57,7 +60,7 @@ export function useLeaveFile(balances, holidaySet) {
 
     return {
         data, setData, processing, errors, reset,
-        selected, wDays, dedMin, needAppeal, needAttach,
+        selected, wDays, minsPerDay, dedMin, needAppeal, needAttach,
         unpaidMin, remMin, ready, submit,
     };
 }

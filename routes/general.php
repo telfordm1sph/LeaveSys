@@ -22,6 +22,7 @@ Route::prefix($app_name)->middleware(AuthMiddleware::class)->group(function () {
 
   Route::middleware(AdminMiddleware::class)->group(function () {
     Route::get("/admin", [AdminController::class, 'index'])->name('admin');
+    Route::get("/admin/employees", [EmployeeBalanceController::class, 'employees'])->name('admin.employees');
     Route::get("/new-admin", [AdminController::class, 'index_addAdmin'])->name('index_addAdmin');
     Route::post("/add-admin", [AdminController::class, 'addAdmin'])->name('addAdmin');
     Route::post("/remove-admin", [AdminController::class, 'removeAdmin'])->name('removeAdmin');
@@ -55,8 +56,9 @@ Route::prefix($app_name)->middleware(AuthMiddleware::class)->group(function () {
       Route::get('/year-end/{id}/logs',  [YearEndConfigController::class, 'logs'])->name('year-end.logs');
 
       // Employee Balances
-      Route::get('/balances',            [EmployeeBalanceController::class, 'index'])->name('balances');
-      Route::post('/balances/adjust',    [EmployeeBalanceController::class, 'adjust'])->name('balances.adjust');
+      Route::get('/balances',                      [EmployeeBalanceController::class, 'index'])->name('balances');
+      Route::post('/balances/adjust',              [EmployeeBalanceController::class, 'adjust'])->name('balances.adjust');
+      Route::get('/balances/{employid}/logs',      [EmployeeBalanceController::class, 'logs'])->name('balances.logs');
     });
   });
 

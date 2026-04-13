@@ -20,4 +20,14 @@ class LeaveBalanceService
     {
         return $this->repo->getByEmployee($employid);
     }
+
+    public function getLogs(int $employid, ?string $leaveType = null): \Illuminate\Pagination\LengthAwarePaginator
+    {
+        return $this->repo->getLogs($employid, 30, $leaveType ?: null);
+    }
+
+    public function getLeaveTypes(int $employid): array
+    {
+        return $this->repo->getLeaveTypes($employid);
+    }
 }

@@ -29,6 +29,7 @@ class LeaveFilingController extends Controller
             'leave_type'    => 'required|string|max:20',
             'date_start'    => 'required|date',
             'date_end'      => 'required|date|after_or_equal:date_start',
+            'duration'      => 'required|in:whole,half',
             'hours_per_day' => 'required|integer|in:8,10,12',
             'reason'        => 'required|string|max:1000',
             // Appeal (VL late filing)

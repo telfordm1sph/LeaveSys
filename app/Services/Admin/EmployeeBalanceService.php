@@ -3,26 +3,50 @@
 namespace App\Services\Admin;
 
 use App\Repositories\Admin\EmployeeBalanceRepository;
+use App\Services\HrisApiService;
 use Illuminate\Support\Collection;
 
 class EmployeeBalanceService
 {
     public function __construct(
-        protected EmployeeBalanceRepository $repo
+        protected EmployeeBalanceRepository $repo,
+        protected HrisApiService $hris,
     ) {}
 
     public function getForEmployee(int $employid): array
     {
-        // $name     = $this->repo->getEmployeeName($employid);
+        $name     = $this->hris->fetchEmployeeName($employid);
         $balances = $this->repo->getBalances($employid);
-        $logs     = $this->repo->getLogs($employid);
 
         return [
             'employid' => $employid,
-            // 'name'     => $name,
+            'name'     => $name,
             'balances' => $balances,
-            'logs'     => $logs,
         ];
+    }
+
+    public function getLogsPage(int $employid, ?string $leaveType): array
+    {
+        $name       = $this->hris->fetchEmployeeName($employid);
+        $logs       = $this->repo->getLogs($employid, 50, $leaveType ?: null);
+        $leaveTypes = $this->repo->getLeaveTypesForEmployee($employid);
+
+        return compact('name', 'logs', 'leaveTypes');
+    }
+
+    public function getEmployeesForCombobox(string $search, int $page): array
+    {
+        $result  = $this->hris->fetchActiveEmployees($search, $page, 50);
+        $options = collect($result['data'])
+            ->filter(fn($e) => !empty($e['employid']))
+            ->map(fn($e) => [
+                'value' => (int) $e['employid'],
+                'label' => $e['employid'] . ' - ' . ($e['emp_name'] ?? 'Unknown'),
+            ])
+            ->values()
+            ->all();
+
+        return ['options' => $options, 'hasMore' => $result['hasMore']];
     }
 
     public function adjust(int $adminId, array $data): array

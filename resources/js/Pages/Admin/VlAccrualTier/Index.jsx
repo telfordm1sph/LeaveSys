@@ -15,14 +15,10 @@ import {
 } from "@/Components/ui/dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
-function toMonthlyDays(minutes) {
-    // e.g. 280 → "7/12"
-    const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
-    const num = minutes / 480;
-    const d = 12;
-    const n = Math.round(num * d);
-    const g = gcd(n, d);
-    return `${n / g}/${d / g}`;
+function toAnnualFraction(minutes) {
+    // Always express as X/12 — e.g. 280 → "7/12", 480 → "12/12"
+    const n = Math.round((minutes / 480) * 12);
+    return `${n}/12`;
 }
 
 function TierForm({ data, setData, errors }) {
@@ -126,7 +122,7 @@ export default function Index({ tiers }) {
                             <tr className="border-b border-border bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                                 <th className="px-4 py-3">Year Bracket</th>
                                 <th className="px-4 py-3 text-right">Monthly Minutes</th>
-                                <th className="px-4 py-3 text-right">Rate</th>
+                                <th className="px-4 py-3 text-right">Annual Rate</th>
                                 <th className="px-4 py-3 text-right">Annual Days</th>
                                 <th className="px-4 py-3 text-right">Actions</th>
                             </tr>
@@ -142,7 +138,7 @@ export default function Index({ tiers }) {
                                     </td>
                                     <td className="px-4 py-3 tabular-nums text-right font-bold">{t.monthly_minutes}</td>
                                     <td className="px-4 py-3 tabular-nums text-right text-muted-foreground text-xs">
-                                        {toMonthlyDays(t.monthly_minutes)} day/mo
+                                        {toAnnualFraction(t.monthly_minutes)} /yr
                                     </td>
                                     <td className="px-4 py-3 tabular-nums text-right text-xs">
                                         {((t.monthly_minutes * 12) / 480).toFixed(0)} days/yr
@@ -176,7 +172,7 @@ export default function Index({ tiers }) {
                     <div>
                         <h1 className="text-xl font-bold">VL Accrual Tiers</h1>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                            Monthly accrual rates by hire tier and service year. Read by Block C cron on Jan 1.
+                            Annual leave entitlement by hire tier and service year. Rate step-up applied by Block D on Jan 1.
                         </p>
                     </div>
                     <Button size="sm" onClick={() => setShowAdd(true)}>

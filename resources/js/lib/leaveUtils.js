@@ -2,7 +2,11 @@
 
 export const MINS_PER_DAY = 480;
 export const VL_ADVANCE_DAYS = 2;
-export const HOURS_OPTIONS = [8, 10, 12];
+export const HOURS_OPTIONS = [8, 10, 12]; // kept for reference; UI uses DURATION_OPTIONS
+export const DURATION_OPTIONS = [
+    { value: "whole", label: "Whole Day",  hrs: 8,  mins: 480 },
+    { value: "half",  label: "Half Day",   hrs: 4,  mins: 240 },
+];
 export const APPEAL_TYPES = ["VL"];
 export const ATTACHMENT_TYPES = ["EL", "BEREAVEMENT"];
 

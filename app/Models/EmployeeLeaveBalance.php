@@ -26,9 +26,9 @@ class EmployeeLeaveBalance extends Model
     protected $casts = [
         'balance_minutes'       => 'integer',
         'monthly_rate_minutes'  => 'integer',
-        'next_accrual_date'     => 'date',
-        'next_yearly_date'      => 'date',
-        'first_earned_at'       => 'date',
+        'next_accrual_date'     => 'date:Y-m-d',
+        'next_yearly_date'      => 'date:Y-m-d',
+        'first_earned_at'       => 'date:Y-m-d',
         'updated_at'            => 'datetime',
     ];
 

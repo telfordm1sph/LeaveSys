@@ -24,12 +24,22 @@ class EmployeeBalanceRepository
             ->get();
     }
 
-    public function getLogs(int $employid, int $perPage = 30): \Illuminate\Pagination\LengthAwarePaginator
+    public function getLogs(int $employid, int $perPage = 30, ?string $leaveType = null): \Illuminate\Pagination\LengthAwarePaginator
     {
         return LeaveAccrualLog::where('employid', $employid)
+            ->when($leaveType, fn($q) => $q->where('leave_type', $leaveType))
             ->orderByDesc('created_at')
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    public function getLeaveTypesForEmployee(int $employid): array
+    {
+        return LeaveAccrualLog::where('employid', $employid)
+            ->distinct()
+            ->orderBy('leave_type')
+            ->pluck('leave_type')
+            ->toArray();
     }
 
     public function getBalance(int $employid, string $leaveType): ?EmployeeLeaveBalance

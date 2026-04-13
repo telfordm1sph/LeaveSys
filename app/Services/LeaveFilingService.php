@@ -122,7 +122,8 @@ class LeaveFilingService
         $leaveType   = strtoupper($data['leave_type']);
         $dateStart   = $data['date_start'];
         $dateEnd     = $data['date_end'];
-        $hoursPerDay = (int) $data['hours_per_day'];
+        $baseHours   = (int) ($data['hours_per_day'] ?? 8);
+        $hoursPerDay = ($data['duration'] ?? 'whole') === 'half' ? $baseHours / 2 : $baseHours;
         $reason      = $data['reason'];
         $appealReason= $data['appeal_reason'] ?? null;
         $datePosted  = Carbon::today()->toDateString();
@@ -177,8 +178,10 @@ class LeaveFilingService
         $remarks = !empty($remarksLines) ? implode(' | ', $remarksLines) : null;
 
         // 7. Create request + deduct balance in one transaction
+        $duration     = ($data['duration'] ?? 'whole') === 'half' ? 'half day' : 'whole day';
+
         $leaveRequest = DB::transaction(function () use (
-            $employid, $leaveType, $dateStart, $dateEnd, $hoursPerDay,
+            $employid, $leaveType, $dateStart, $dateEnd, $hoursPerDay, $duration,
             $workingDays, $deductionMinutes, $reason, $status,
             $adminRemark, $datePosted, $isLate, $requirements,
             $balance, $paidMinutes, $appealReason, $remarks
@@ -205,7 +208,7 @@ class LeaveFilingService
                 $balance,
                 $paidMinutes,
                 $request->id,
-                "{$leaveType} leave filed — {$workingDays} working day(s) at {$hoursPerDay}hrs/day"
+                "{$leaveType} leave filed — {$workingDays} working day(s), {$duration} ({$hoursPerDay}hrs/day)"
             );
 
             return $request;

@@ -30,7 +30,7 @@ class LeaveAccrualLog extends Model
         'minutes_delta'     => 'integer',
         'minutes_after'     => 'integer',
         'leave_request_id'  => 'integer',
-        'created_at'        => 'datetime',
+        'created_at'        => 'date:Y-m-d',
     ];
 
     public function leaveRequest(): BelongsTo

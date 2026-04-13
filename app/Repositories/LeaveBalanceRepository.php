@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\EmployeeLeaveBalance;
+use App\Models\LeaveAccrualLog;
 use Illuminate\Support\Collection;
 
 class LeaveBalanceRepository
@@ -33,5 +34,23 @@ class LeaveBalanceRepository
             ])
             ->orderBy('leave_policy.id')
             ->get();
+    }
+
+    public function getLogs(int $employid, int $perPage = 30, ?string $leaveType = null): \Illuminate\Pagination\LengthAwarePaginator
+    {
+        return LeaveAccrualLog::where('employid', $employid)
+            ->when($leaveType, fn($q) => $q->where('leave_type', $leaveType))
+            ->orderByDesc('created_at')
+            ->paginate($perPage)
+            ->withQueryString();
+    }
+
+    public function getLeaveTypes(int $employid): array
+    {
+        return LeaveAccrualLog::where('employid', $employid)
+            ->distinct()
+            ->orderBy('leave_type')
+            ->pluck('leave_type')
+            ->toArray();
     }
 }

@@ -6,7 +6,20 @@
       "Bash(node -e ':*)",
       "Bash(powershell -Command ':*)",
       "Bash(npx shadcn@latest add card badge progress --yes)",
-      "Bash(npx shadcn@latest add select alert input --yes)"
+      "Bash(npx shadcn@latest add select alert input --yes)",
+      "Bash(php \"C:\\\\Users\\\\telford.programmer\\\\Desktop\\\\LeaveSys\\\\artisan\" tinker --execute=\"echo implode\\(', ', \\\\Illuminate\\\\Support\\\\Facades\\\\DB::connection\\(\\)->getDoctrineSchemaManager\\(\\)->listTableNames\\(\\)\\);\")",
+      "Bash(php \"C:\\\\Users\\\\telford.programmer\\\\Desktop\\\\LeaveSys\\\\artisan\" db:show --json)",
+      "Bash(php \"C:\\\\Users\\\\telford.programmer\\\\Desktop\\\\LeaveSys\\\\artisan\" db:show)",
+      "Bash(php:*)",
+      "Bash(curl -s -H \"X-Internal-Key: hris-secret-123456\" \"http://127.0.0.1:8000/api/employees/1705\")",
+      "Bash(npm install:*)",
+      "Bash(curl -s -H \"X-Internal-Key: hris-secret-123456\" \"http://127.0.0.1:8000/api/1705/active\")",
+      "Bash(curl -s -H \"X-Internal-Key: hris-secret-123456\" \"http://127.0.0.1:8000/api/active\")",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s -H \"X-Internal-Key: hris-secret-123456\" \"http://127.0.0.1:8000/active\")",
+      "Bash(curl -s -H \"X-Internal-Key: hris-secret-123456\" \"http://127.0.0.1:8000/api/employees/active\")",
+      "Bash(curl -s \"http://127.0.0.1:8000/api/employees/active\" -H \"X-Internal-Key: $\\(grep HRIS_KEY /c/Users/telford.programmer/Desktop/LeaveSys/.env)",
+      "Bash(curl -s \"http://127.0.0.1:8000/api/employees/active\" -H \"X-Internal-Key: hris-secret-123456\")"
     ]
   }
 }
