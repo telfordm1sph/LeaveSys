@@ -19,13 +19,18 @@ class LeaveController extends Controller
         $employid = (int) session('emp_data.emp_id');
 
         $balances = $this->leaveBalanceService->getBalances($employid);
-        $logs     = $this->leaveBalanceService->getLogs($employid, $request->query('leave_type'));
+        $logs     = $this->leaveBalanceService->getLogs(
+            $employid,
+            $request->query('leave_type'),
+            $request->query('search'),
+        );
 
         return Inertia::render('Leave/Balances', [
             'balances'   => $balances->values(),
             'logs'       => $logs,
             'leaveTypes' => $this->leaveBalanceService->getLeaveTypes($employid),
             'filterType' => $request->query('leave_type', ''),
+            'search'     => $request->query('search', ''),
         ]);
     }
 }

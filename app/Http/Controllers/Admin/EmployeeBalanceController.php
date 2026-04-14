@@ -40,7 +40,11 @@ class EmployeeBalanceController extends Controller
 
     public function logs(Request $request, int $employid): Response
     {
-        $data = $this->service->getLogsPage($employid, $request->query('leave_type'));
+        $data = $this->service->getLogsPage(
+            $employid,
+            $request->query('leave_type'),
+            $request->query('search'),
+        );
 
         return Inertia::render('Admin/EmployeeBalance/Logs', [
             'employid'   => $employid,
@@ -48,6 +52,7 @@ class EmployeeBalanceController extends Controller
             'logs'       => $data['logs'],
             'leaveTypes' => $data['leaveTypes'],
             'filterType' => $request->query('leave_type', ''),
+            'search'     => $request->query('search', ''),
         ]);
     }
 

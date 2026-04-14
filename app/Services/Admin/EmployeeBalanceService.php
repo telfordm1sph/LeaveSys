@@ -25,10 +25,10 @@ class EmployeeBalanceService
         ];
     }
 
-    public function getLogsPage(int $employid, ?string $leaveType): array
+    public function getLogsPage(int $employid, ?string $leaveType, ?string $search = null): array
     {
         $name       = $this->hris->fetchEmployeeName($employid);
-        $logs       = $this->repo->getLogs($employid, 50, $leaveType ?: null);
+        $logs       = $this->repo->getLogs($employid, 10, $leaveType ?: null, $search ?: null);
         $leaveTypes = $this->repo->getLeaveTypesForEmployee($employid);
 
         return compact('name', 'logs', 'leaveTypes');

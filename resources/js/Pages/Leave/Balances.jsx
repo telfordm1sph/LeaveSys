@@ -1,13 +1,16 @@
+import { useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, usePage, router } from "@inertiajs/react";
 import BalanceCard from "@/Components/Leave/BalanceCard";
-import { Badge }  from "@/Components/ui/badge";
 import { Button } from "@/Components/ui/button";
+import { Input }  from "@/Components/ui/input";
 import {
     Select, SelectContent, SelectItem,
     SelectTrigger, SelectValue,
 } from "@/Components/ui/select";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+    ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, Search,
+} from "lucide-react";
 
 const ACTION_COLORS = {
     accrual:         "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
@@ -21,17 +24,30 @@ const ACTION_COLORS = {
     manual_adj:      "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
 };
 
-function fmtMin(n) { return Number(n).toLocaleString(); }
-function fmtDays(mins) { return (Math.abs(mins) / 480).toFixed(2); }
+function fmtMin(n)   { return Number(n).toLocaleString(); }
+function fmtDays(m)  { return (Math.abs(m) / 480).toFixed(2); }
 
-export default function Balances({ balances, logs, leaveTypes, filterType }) {
+export default function Balances({ balances, logs, leaveTypes, filterType, search: serverSearch }) {
     const { emp_data } = usePage().props;
+    const [searchInput, setSearchInput] = useState(serverSearch ?? "");
 
     const totalDays = balances.reduce((s, b) => s + (parseInt(b.balance_minutes, 10) || 0) / 480, 0);
     const lowCount  = balances.filter((b) => (parseInt(b.balance_minutes, 10) || 0) / 480 < 1).length;
 
+    function navigate(params) {
+        router.get(route("leave.balances"), { ...params }, { preserveScroll: true });
+    }
+
     function applyFilter(type) {
-        router.get(route("leave.balances"), { leave_type: type || undefined });
+        navigate({ leave_type: type || undefined, search: searchInput || undefined });
+    }
+
+    function doSearch() {
+        navigate({ leave_type: filterType || undefined, search: searchInput || undefined });
+    }
+
+    function goPage(url) {
+        router.get(url, {}, { preserveScroll: true });
     }
 
     return (
@@ -45,13 +61,13 @@ export default function Balances({ balances, logs, leaveTypes, filterType }) {
                     <div>
                         <h1 className="text-xl font-bold leading-none">Leave Balances</h1>
                         <p className="mt-1 text-xs text-muted-foreground">
-                            {emp_data?.emp_name}&ensp;·&ensp;1 day = 8 hrs = 480 min
+                            {emp_data?.emp_name}&ensp;·&ensp;1 balance = 8 hrs = 480 min
                         </p>
                     </div>
                     {balances.length > 0 && (
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <span>
-                                <span className="font-semibold text-foreground">{totalDays.toFixed(2)}</span> total days
+                                <span className="font-semibold text-foreground">{totalDays.toFixed(2)}</span> total balance
                             </span>
                             {lowCount > 0 && (
                                 <span className="font-medium text-destructive">
@@ -76,9 +92,30 @@ export default function Balances({ balances, logs, leaveTypes, filterType }) {
                 {/* Accrual log */}
                 {logs && (
                     <div className="rounded-xl border border-border overflow-hidden">
-                        <div className="flex items-center justify-between border-b border-border px-4 py-2.5 bg-muted/20 gap-3">
-                            <span className="text-sm font-semibold shrink-0">Leave History</span>
-                            <div className="flex items-center gap-3 ml-auto">
+
+                        {/* ── Toolbar ─────────────────────────────────────── */}
+                        <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-2.5 bg-muted/20">
+                            <span className="text-sm font-semibold shrink-0 mr-1">Leave History</span>
+
+                            {/* Search */}
+                            <div className="flex items-center gap-1.5 flex-1 min-w-[180px]">
+                                <div className="relative flex-1 max-w-xs">
+                                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                                    <Input
+                                        className="h-7 pl-8 text-xs"
+                                        placeholder="Search remarks or action…"
+                                        value={searchInput}
+                                        onChange={(e) => setSearchInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && doSearch()}
+                                    />
+                                </div>
+                                <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs" onClick={doSearch}>
+                                    Search
+                                </Button>
+                            </div>
+
+                            <div className="flex items-center gap-2 ml-auto">
+                                {/* Leave-type filter */}
                                 {leaveTypes?.length > 0 && (
                                     <Select value={filterType || "all"} onValueChange={v => applyFilter(v === "all" ? "" : v)}>
                                         <SelectTrigger className="h-7 w-36 text-xs">
@@ -93,7 +130,7 @@ export default function Balances({ balances, logs, leaveTypes, filterType }) {
                                     </Select>
                                 )}
                                 <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                    {logs.current_page} / {logs.last_page}
+                                    {logs.total.toLocaleString()} record{logs.total !== 1 ? "s" : ""}
                                 </span>
                             </div>
                         </div>
@@ -172,20 +209,31 @@ export default function Balances({ balances, logs, leaveTypes, filterType }) {
                             </div>
                         )}
 
+                        {/* ── Pagination ───────────────────────────────────── */}
                         {logs.last_page > 1 && (
-                            <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
-                                <Button size="icon" variant="ghost" className="h-8 w-8"
+                            <div className="flex items-center justify-end gap-1 border-t border-border px-4 py-3">
+                                <Button size="icon" variant="ghost" className="h-7 w-7"
                                     disabled={logs.current_page <= 1}
-                                    onClick={() => router.get(logs.prev_page_url)}>
-                                    <ChevronLeft className="h-4 w-4" />
+                                    onClick={() => goPage(logs.first_page_url)}>
+                                    <ChevronsLeft className="h-3.5 w-3.5" />
                                 </Button>
-                                <span className="text-xs text-muted-foreground">
-                                    {logs.current_page} / {logs.last_page}
+                                <Button size="icon" variant="ghost" className="h-7 w-7"
+                                    disabled={logs.current_page <= 1}
+                                    onClick={() => goPage(logs.prev_page_url)}>
+                                    <ChevronLeft className="h-3.5 w-3.5" />
+                                </Button>
+                                <span className="px-2 text-xs text-muted-foreground">
+                                    <strong>{logs.current_page}</strong> / <strong>{logs.last_page}</strong>
                                 </span>
-                                <Button size="icon" variant="ghost" className="h-8 w-8"
+                                <Button size="icon" variant="ghost" className="h-7 w-7"
                                     disabled={logs.current_page >= logs.last_page}
-                                    onClick={() => router.get(logs.next_page_url)}>
-                                    <ChevronRight className="h-4 w-4" />
+                                    onClick={() => goPage(logs.next_page_url)}>
+                                    <ChevronRight className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-7 w-7"
+                                    disabled={logs.current_page >= logs.last_page}
+                                    onClick={() => goPage(logs.last_page_url)}>
+                                    <ChevronsRight className="h-3.5 w-3.5" />
                                 </Button>
                             </div>
                         )}

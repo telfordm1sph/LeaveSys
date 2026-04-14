@@ -24,10 +24,14 @@ class EmployeeBalanceRepository
             ->get();
     }
 
-    public function getLogs(int $employid, int $perPage = 30, ?string $leaveType = null): \Illuminate\Pagination\LengthAwarePaginator
+    public function getLogs(int $employid, int $perPage = 10, ?string $leaveType = null, ?string $search = null): \Illuminate\Pagination\LengthAwarePaginator
     {
         return LeaveAccrualLog::where('employid', $employid)
             ->when($leaveType, fn($q) => $q->where('leave_type', $leaveType))
+            ->when($search, fn($q) => $q->where(function ($q2) use ($search) {
+                $q2->where('remarks', 'like', "%{$search}%")
+                   ->orWhere('action_type', 'like', "%{$search}%");
+            }))
             ->orderByDesc('created_at')
             ->paginate($perPage)
             ->withQueryString();
