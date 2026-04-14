@@ -16,25 +16,11 @@ export const EARN_TYPE_LABEL = {
     event: "Event",
 };
 
-export const EARN_COLORS = {
-    monthly: {
-        bg: "bg-blue-50 dark:bg-blue-950/40",
-        accent: "text-blue-600 dark:text-blue-400",
-        pill: "bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300",
-        border: "border-blue-200 dark:border-blue-800",
-    },
-    yearly: {
-        bg: "bg-violet-50 dark:bg-violet-950/40",
-        accent: "text-violet-600 dark:text-violet-400",
-        pill: "bg-violet-100 dark:bg-violet-900/60 text-violet-700 dark:text-violet-300",
-        border: "border-violet-200 dark:border-violet-800",
-    },
-    event: {
-        bg: "bg-amber-50 dark:bg-amber-950/40",
-        accent: "text-amber-600 dark:text-amber-400",
-        pill: "bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300",
-        border: "border-amber-200 dark:border-amber-800",
-    },
+// Chart CSS variables — defined in tailwind.config.js, dark-mode-aware automatically.
+export const EARN_CHART_VAR = {
+    monthly: "--chart-1",
+    yearly:  "--chart-4",
+    event:   "--chart-3",
 };
 
 // ─── Minute conversions ───────────────────────────────────────────────────────

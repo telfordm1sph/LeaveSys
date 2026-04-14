@@ -39,23 +39,25 @@ class LeaveRequestController extends Controller
 
     public function staffRequests(Request $request): Response
     {
-        [$employid, $tab, , $page] = $this->parseParams($request);
+        [$employid, $tab, $search, $page] = $this->parseParams($request);
 
         return Inertia::render('Leave/StaffRequests', [
-            'pending' => $tab === 'pending' ? $this->service->getPendingApprovals($employid, false) : [],
-            'history' => $tab === 'history' ? $this->service->getStaffHistory($employid, false, $page) : null,
+            'pending' => $tab === 'pending' ? $this->service->getPendingApprovals($employid, false, $search) : [],
+            'history' => $tab === 'history' ? $this->service->getStaffHistory($employid, false, $page, $search) : null,
             'tab'     => $tab,
+            'search'  => $search,
         ]);
     }
 
     public function staffAppeals(Request $request): Response
     {
-        [$employid, $tab, , $page] = $this->parseParams($request);
+        [$employid, $tab, $search, $page] = $this->parseParams($request);
 
         return Inertia::render('Leave/StaffAppeals', [
-            'pending' => $tab === 'pending' ? $this->service->getPendingApprovals($employid, true) : [],
-            'history' => $tab === 'history' ? $this->service->getStaffHistory($employid, true, $page) : null,
+            'pending' => $tab === 'pending' ? $this->service->getPendingApprovals($employid, true, $search) : [],
+            'history' => $tab === 'history' ? $this->service->getStaffHistory($employid, true, $page, $search) : null,
             'tab'     => $tab,
+            'search'  => $search,
         ]);
     }
 

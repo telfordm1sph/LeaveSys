@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class LeaveRequest extends Model
 {
@@ -18,6 +19,8 @@ class LeaveRequest extends Model
         'hours_per_day',
         'working_days',
         'deduction_minutes',
+        'paid_minutes',
+        'unpaid_minutes',
         'reason',
         'status',
         'remarks',
@@ -37,6 +40,8 @@ class LeaveRequest extends Model
         'hours_per_day'     => 'integer',
         'working_days'      => 'integer',
         'deduction_minutes' => 'integer',
+        'paid_minutes'      => 'integer',
+        'unpaid_minutes'    => 'integer',
         'is_late_filing'    => 'boolean',
         'with_appeal'       => 'boolean',
         'is_batch'          => 'boolean',
@@ -52,5 +57,15 @@ class LeaveRequest extends Model
     public function accrualLogs(): HasMany
     {
         return $this->hasMany(LeaveAccrualLog::class, 'leave_request_id');
+    }
+
+    public function appealFiles(): HasMany
+    {
+        return $this->hasMany(AppealFile::class, 'leave_id');
+    }
+
+    public function attachmentFiles(): HasMany
+    {
+        return $this->hasMany(AttachmentFile::class, 'leave_id');
     }
 }

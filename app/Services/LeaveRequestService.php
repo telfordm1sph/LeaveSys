@@ -6,6 +6,7 @@ use App\Models\LeaveApprover;
 use App\Models\LeaveRequest;
 use App\Repositories\LeaveFilingRepository;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class LeaveRequestService
 {
@@ -28,10 +29,14 @@ class LeaveRequestService
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($q2) use ($search) {
                     $q2->where('leave_type', 'like', "%{$search}%")
-                       ->orWhere('reason', 'like', "%{$search}%");
+                        ->orWhere('reason', 'like', "%{$search}%");
                 });
             })
-            ->with(['approvers' => fn($q) => $q->orderBy('approver_level')])
+            ->with([
+                'approvers'       => fn($q) => $q->orderBy('approver_level'),
+                'appealFiles',
+                'attachmentFiles',
+            ])
             ->orderByDesc('date_start')
             ->paginate(15, ['*'], 'page', $page);
 
@@ -42,9 +47,11 @@ class LeaveRequestService
         $names = $this->resolveNames($approverIds);
 
         $items = collect($paginator->items())->map(fn($r) => array_merge($r->toArray(), [
-            'approvers' => $r->approvers->map(fn($a) => array_merge($a->toArray(), [
+            'approvers'        => $r->approvers->map(fn($a) => array_merge($a->toArray(), [
                 'approver_name' => $names[$a->approver_employid] ?? "#{$a->approver_employid}",
             ]))->toArray(),
+            'appeal_files'     => $this->mapAppealFiles($r->appealFiles),
+            'attachment_files' => $this->mapAttachmentFiles($r->attachmentFiles),
         ]))->toArray();
 
         return [
@@ -58,11 +65,15 @@ class LeaveRequestService
 
     // ─── Approver: pending for me ─────────────────────────────────────────────
 
-    public function getPendingApprovals(int $approverId, bool $withAppeal = false): array
+    public function getPendingApprovals(int $approverId, bool $withAppeal = false, string $search = ''): array
     {
         $records = LeaveApprover::where('approver_employid', $approverId)
             ->where('status', 'pending')
-            ->with(['leaveRequest.approvers' => fn($q) => $q->orderBy('approver_level')])
+            ->with([
+                'leaveRequest.approvers'       => fn($q) => $q->orderBy('approver_level'),
+                'leaveRequest.appealFiles',
+                'leaveRequest.attachmentFiles',
+            ])
             ->get()
             ->filter(fn($ar) => $ar->leaveRequest && (bool) $ar->leaveRequest->with_appeal === $withAppeal);
 
@@ -74,37 +85,69 @@ class LeaveRequestService
                 ->every(fn($a) => $a->status === 'approved');
         });
 
-        // Resolve filer names
+        // Resolve filer + approver names in one batch
         $employeeIds = $filtered->pluck('leaveRequest.employid')->unique()->all();
-        $names       = $this->resolveNames($employeeIds);
+        $approverIds = $filtered->flatMap(fn($ar) => $ar->leaveRequest->approvers->pluck('approver_employid'))->unique()->all();
+        $names       = $this->resolveNames(array_unique(array_merge($employeeIds, $approverIds)));
 
-        return $filtered->map(fn($ar) => array_merge($ar->leaveRequest->toArray(), [
+        $mapped = $filtered->map(fn($ar) => array_merge($ar->leaveRequest->toArray(), [
             'employee_name'     => $names[$ar->leaveRequest->employid] ?? "#{$ar->leaveRequest->employid}",
             'my_approver_level' => $ar->approver_level,
             'approvers'         => $ar->leaveRequest->approvers
-                ->map(fn($a) => $a->toArray())->toArray(),
-        ]))->values()->toArray();
+                ->map(fn($a) => array_merge($a->toArray(), [
+                    'approver_name' => $names[$a->approver_employid] ?? "#{$a->approver_employid}",
+                ]))->toArray(),
+            'appeal_files'     => $this->mapAppealFiles($ar->leaveRequest->appealFiles),
+            'attachment_files' => $this->mapAttachmentFiles($ar->leaveRequest->attachmentFiles),
+        ]));
+
+        if ($search !== '') {
+            $term   = strtolower($search);
+            $mapped = $mapped->filter(
+                fn($r) =>
+                str_contains(strtolower($r['leave_type'] ?? ''), $term) ||
+                    str_contains(strtolower($r['reason'] ?? ''), $term) ||
+                    str_contains(strtolower($r['employee_name'] ?? ''), $term)
+            );
+        }
+
+        return $mapped->values()->toArray();
     }
 
     // ─── Approver: history (already actioned) ────────────────────────────────
 
-    public function getStaffHistory(int $approverId, bool $withAppeal, int $page = 1): array
+    public function getStaffHistory(int $approverId, bool $withAppeal, int $page = 1, string $search = ''): array
     {
         $perPage = 15;
 
         $all = LeaveApprover::where('approver_employid', $approverId)
             ->whereIn('status', ['approved', 'rejected'])
-            ->with(['leaveRequest.approvers' => fn($q) => $q->orderBy('approver_level')])
+            ->with([
+                'leaveRequest.approvers'       => fn($q) => $q->orderBy('approver_level'),
+                'leaveRequest.appealFiles',
+                'leaveRequest.attachmentFiles',
+            ])
             ->get()
             ->filter(fn($ar) => $ar->leaveRequest && (bool) $ar->leaveRequest->with_appeal === $withAppeal)
             ->sortByDesc('decided_at')
             ->values();
 
+        if ($search !== '') {
+            $term = strtolower($search);
+            $all  = $all->filter(
+                fn($ar) =>
+                str_contains(strtolower($ar->leaveRequest->leave_type ?? ''), $term) ||
+                    str_contains(strtolower($ar->leaveRequest->reason ?? ''), $term)
+            )->values();
+        }
+
+        // Resolve filer + approver names in one batch before slicing
+        $employeeIds = $all->pluck('leaveRequest.employid')->unique()->all();
+        $approverIds = $all->flatMap(fn($ar) => $ar->leaveRequest->approvers->pluck('approver_employid'))->unique()->all();
+        $names       = $this->resolveNames(array_unique(array_merge($employeeIds, $approverIds)));
+
         $total = $all->count();
         $items = $all->slice(($page - 1) * $perPage, $perPage)->values();
-
-        $employeeIds = $items->pluck('leaveRequest.employid')->unique()->all();
-        $names       = $this->resolveNames($employeeIds);
 
         return [
             'data'         => $items->map(fn($ar) => array_merge($ar->leaveRequest->toArray(), [
@@ -113,7 +156,11 @@ class LeaveRequestService
                 'my_status'         => $ar->status,
                 'my_remarks'        => $ar->remarks,
                 'my_decided_at'     => $ar->decided_at,
-                'approvers'         => $ar->leaveRequest->approvers->map(fn($a) => $a->toArray())->toArray(),
+                'approvers'         => $ar->leaveRequest->approvers->map(fn($a) => array_merge($a->toArray(), [
+                    'approver_name' => $names[$a->approver_employid] ?? "#{$a->approver_employid}",
+                ]))->toArray(),
+                'appeal_files'     => $this->mapAppealFiles($ar->leaveRequest->appealFiles),
+                'attachment_files' => $this->mapAttachmentFiles($ar->leaveRequest->attachmentFiles),
             ]))->toArray(),
             'current_page' => $page,
             'last_page'    => max(1, (int) ceil($total / $perPage)),
@@ -203,5 +250,36 @@ class LeaveRequestService
             $names[$id] = $this->hris->fetchEmployeeName($id) ?? "#{$id}";
         }
         return $names;
+    }
+
+    /** Build appeal_files array (public URLs + meta) from the appeal_files relation. */
+    private function mapAppealFiles($files): array
+    {
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $publicDisk */
+        $publicDisk = Storage::disk('public');
+
+        return $files->map(fn($f) => [
+            'id'                 => $f->id,
+            'original_file_name' => $f->original_file_name,
+            'url'                => $publicDisk->url("{$f->file_location}/{$f->file_name}"),
+            'file_type'          => $f->file_type,
+            'file_size'          => $f->file_size,
+            'reason'             => $f->reason,
+        ])->values()->toArray();
+    }
+
+    /** Build attachment_files array (public URLs + meta) from the attachment_files relation. */
+    private function mapAttachmentFiles($files): array
+    {
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $publicDisk */
+        $publicDisk = Storage::disk('public');
+
+        return $files->map(fn($f) => [
+            'id'                 => $f->id,
+            'original_file_name' => $f->original_file_name,
+            'url'                => $publicDisk->url("{$f->file_location}/{$f->file_name}"),
+            'file_type'          => $f->file_type,
+            'file_size'          => $f->file_size,
+        ])->values()->toArray();
     }
 }

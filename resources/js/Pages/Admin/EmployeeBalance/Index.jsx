@@ -12,12 +12,12 @@ import {
 } from "@/Components/ui/dialog";
 import { SlidersHorizontal, ScrollText, CalendarClock, RefreshCw } from "lucide-react";
 
-function toDisplayDays(minutes) {
-    return Math.floor(parseInt(minutes) / 480);
-}
+function toDisplayDays(minutes) { return (parseInt(minutes) / 480).toFixed(2); }
+function toDisplayMin(minutes)  { return parseInt(minutes).toLocaleString(); }
 
-function toDisplayMin(minutes) {
-    return parseInt(minutes).toLocaleString();
+const EARN_CHART_VAR = { monthly: "--chart-1", yearly: "--chart-4", event: "--chart-3" };
+function accentColor(earnType) {
+    return `hsl(var(${EARN_CHART_VAR[earnType] ?? EARN_CHART_VAR.monthly}))`;
 }
 
 export default function Index({ employid, employee }) {
@@ -116,49 +116,66 @@ export default function Index({ employid, employee }) {
                 {/* ── Balance cards ────────────────────────────────────────── */}
                 {employee?.name && balances.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-                        {balances.map((b) => (
-                            <div key={b.id}
-                                className="rounded-xl border border-border bg-card flex flex-col gap-3 p-4 hover:border-primary/30 transition-colors">
-
-                                {/* Header */}
-                                <div className="flex items-start justify-between gap-2">
-                                    <span className="font-mono text-xs font-bold tracking-wide bg-muted px-1.5 py-0.5 rounded">
-                                        {b.leave_type}
-                                    </span>
-                                    <span className="text-[11px] text-muted-foreground text-right leading-tight">{b.label}</span>
-                                </div>
-
-                                {/* Balance */}
-                                <div>
-                                    <p className="text-3xl font-extrabold tabular-nums leading-none">
-                                        {toDisplayDays(b.balance_minutes)}
-                                        <span className="text-base font-semibold text-muted-foreground ml-1">days</span>
-                                    </p>
-                                    <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">
-                                        {toDisplayMin(b.balance_minutes)} min
-                                    </p>
-                                </div>
-
-                                {/* Dates */}
-                                <div className="space-y-1 text-[11px] text-muted-foreground">
-                                    <div className="flex items-center gap-1.5">
-                                        <CalendarClock className="h-3 w-3 shrink-0" />
-                                        <span>Accrual: <span className="font-mono">{b.next_accrual_date ?? "—"}</span></span>
+                        {balances.map((b) => {
+                            const color  = accentColor(b.earn_type);
+                            const mins   = parseInt(b.balance_minutes) || 0;
+                            const isLow  = mins > 0 && mins / 480 < 1;
+                            return (
+                                <div key={b.id}
+                                    className="rounded-xl border border-border bg-card flex flex-col gap-3 p-4 transition-colors"
+                                    style={{ borderLeftColor: color, borderLeftWidth: "3px" }}
+                                >
+                                    {/* Header */}
+                                    <div className="flex items-start justify-between gap-2">
+                                        <p className="truncate text-sm font-semibold text-card-foreground">{b.label}</p>
+                                        <span
+                                            className="shrink-0 font-mono text-[10px] font-bold tracking-wide border rounded px-1.5 py-0.5"
+                                            style={{ color, borderColor: color }}
+                                        >
+                                            {b.leave_type}
+                                        </span>
                                     </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <RefreshCw className="h-3 w-3 shrink-0" />
-                                        <span>Yearly: <span className="font-mono">{b.next_yearly_date ?? "—"}</span></span>
-                                    </div>
-                                </div>
 
-                                {/* Action */}
-                                <Button size="sm" variant="outline"
-                                    className="mt-auto h-7 w-full text-xs gap-1"
-                                    onClick={() => openAdjust(b)}>
-                                    <SlidersHorizontal className="h-3.5 w-3.5" /> Adjust
-                                </Button>
-                            </div>
-                        ))}
+                                    {/* Balance — fixed height for alignment */}
+                                    <div className="min-h-[3.25rem] flex flex-col justify-center">
+                                        {mins === 0 ? (
+                                            <p className="text-3xl font-bold leading-none text-muted-foreground/40">—</p>
+                                        ) : (
+                                            <>
+                                                <p
+                                                    className="text-3xl font-extrabold tabular-nums leading-none"
+                                                    style={{ color: isLow ? "hsl(var(--destructive))" : color }}
+                                                >
+                                                    {toDisplayDays(b.balance_minutes)}
+                                                </p>
+                                                <p className="mt-1 text-[11px] tabular-nums text-muted-foreground">
+                                                    {toDisplayMin(b.balance_minutes)} min
+                                                </p>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* Dates */}
+                                    <div className="space-y-1 text-[11px] text-muted-foreground">
+                                        <div className="flex items-center gap-1.5">
+                                            <CalendarClock className="h-3 w-3 shrink-0" />
+                                            <span>Accrual: <span className="font-mono">{b.next_accrual_date ?? "—"}</span></span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <RefreshCw className="h-3 w-3 shrink-0" />
+                                            <span>Yearly: <span className="font-mono">{b.next_yearly_date ?? "—"}</span></span>
+                                        </div>
+                                    </div>
+
+                                    {/* Action */}
+                                    <Button size="sm" variant="outline"
+                                        className="mt-auto h-7 w-full text-xs gap-1"
+                                        onClick={() => openAdjust(b)}>
+                                        <SlidersHorizontal className="h-3.5 w-3.5" /> Adjust
+                                    </Button>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>

@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\AppealFile;
+use App\Models\AttachmentFile;
 use App\Repositories\LeaveFilingRepository;
 use App\Services\HrisApiService;
 use Carbon\Carbon;
@@ -14,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
 class LeaveFilingService
 {
     private const REQUIRES_APPEAL_IF_LATE = ['VL'];
-    private const REQUIRES_ATTACHMENT     = ['EL', 'BEREAVEMENT'];
+    private const REQUIRES_ATTACHMENT     = ['EL', 'BRL'];
     private const VL_ADVANCE_DAYS         = 2;
     private const AUTO_APPROVE_POSITION   = 5;
     private const HR_VERIFICATION_TYPES   = ['MATERNITY'];
@@ -97,41 +99,50 @@ class LeaveFilingService
 
     // ─── Approver chain ───────────────────────────────────────────────────────
 
-    private function createApprovers(int $requestId, int $employid, bool $needsOD): void
+    private function createApprovers(int $requestId, int $employid, bool $isAppeal): void
     {
         try {
-            $approvers = $this->hris->fetchApprovers($employid);
-            if (!$approvers || !$approvers['approver1_id']) {
-                Log::warning('LeaveFilingService: no approver data for employee', [
-                    'leave_request_id' => $requestId,
-                    'employid'         => $employid,
-                ]);
-                return;
-            }
-
-            $this->repo->createApprover([
-                'leave_request_id'  => $requestId,
-                'approver_employid' => $approvers['approver1_id'],
-                'approver_level'    => 1,
-                'status'            => 'pending',
-            ]);
-
-            if ($approvers['approver2_id']) {
-                $this->repo->createApprover([
-                    'leave_request_id'  => $requestId,
-                    'approver_employid' => $approvers['approver2_id'],
-                    'approver_level'    => 2,
-                    'status'            => 'pending',
-                ]);
-            }
-
-            if ($needsOD) {
+            if ($isAppeal) {
+                // Appeal chain: 2nd approver (L1) → Operation Director (L2)
+                $approvers = $this->hris->fetchApprovers($employid);
+                if ($approvers && $approvers['approver2_id']) {
+                    $this->repo->createApprover([
+                        'leave_request_id'  => $requestId,
+                        'approver_employid' => $approvers['approver2_id'],
+                        'approver_level'    => 1,
+                        'status'            => 'pending',
+                    ]);
+                }
                 $od = $this->hris->fetchOperationDirector();
                 if ($od) {
                     $this->repo->createApprover([
                         'leave_request_id'  => $requestId,
                         'approver_employid' => $od['emp_id'],
-                        'approver_level'    => 3,
+                        'approver_level'    => 2,
+                        'status'            => 'pending',
+                    ]);
+                }
+            } else {
+                // Normal chain: 1st approver (L1) → 2nd approver (L2, if exists)
+                $approvers = $this->hris->fetchApprovers($employid);
+                if (!$approvers || !$approvers['approver1_id']) {
+                    Log::warning('LeaveFilingService: no approver data for employee', [
+                        'leave_request_id' => $requestId,
+                        'employid'         => $employid,
+                    ]);
+                    return;
+                }
+                $this->repo->createApprover([
+                    'leave_request_id'  => $requestId,
+                    'approver_employid' => $approvers['approver1_id'],
+                    'approver_level'    => 1,
+                    'status'            => 'pending',
+                ]);
+                if ($approvers['approver2_id']) {
+                    $this->repo->createApprover([
+                        'leave_request_id'  => $requestId,
+                        'approver_employid' => $approvers['approver2_id'],
+                        'approver_level'    => 2,
                         'status'            => 'pending',
                     ]);
                 }
@@ -145,15 +156,43 @@ class LeaveFilingService
 
     // ─── File storage ─────────────────────────────────────────────────────────
 
-    private function storeFiles(array $files, string $folder): array
+    private function saveAppealFiles(array $files, int|string $leaveId, int $employid, ?string $reason): void
     {
-        $paths = [];
+        $folder = "leave-attachments/{$employid}/appeals";
         foreach ($files as $file) {
-            if ($file instanceof UploadedFile) {
-                $paths[] = $file->store("leave-attachments/{$folder}", 'public');
-            }
+            if (!$file instanceof UploadedFile) continue;
+            $storedPath = $file->store($folder, 'public');
+            AppealFile::create([
+                'leave_id'           => (string) $leaveId,
+                'employid'           => (string) $employid,
+                'original_file_name' => $file->getClientOriginalName(),
+                'file_location'      => $folder,
+                'file_name'          => basename($storedPath),
+                'file_type'          => $file->getMimeType(),
+                'file_size'          => $file->getSize(),
+                'date_filed'         => now(),
+                'reason'             => $reason,
+            ]);
         }
-        return $paths;
+    }
+
+    private function saveAttachmentFiles(array $files, int|string $leaveId, int $employid): void
+    {
+        $folder = "leave-attachments/{$employid}/attachments";
+        foreach ($files as $file) {
+            if (!$file instanceof UploadedFile) continue;
+            $storedPath = $file->store($folder, 'public');
+            AttachmentFile::create([
+                'leave_id'           => (string) $leaveId,
+                'employid'           => (string) $employid,
+                'original_file_name' => $file->getClientOriginalName(),
+                'file_location'      => $folder,
+                'file_name'          => basename($storedPath),
+                'file_type'          => $file->getMimeType(),
+                'file_size'          => $file->getSize(),
+                'date_filed'         => now(),
+            ]);
+        }
     }
 
     // ─── Core filing ─────────────────────────────────────────────────────────
@@ -176,7 +215,7 @@ class LeaveFilingService
         $baseHours   = (int) ($data['hours_per_day'] ?? 8);
         $hoursPerDay = ($data['duration'] ?? 'whole') === 'half' ? $baseHours / 2 : $baseHours;
         $reason      = $data['reason'];
-        $appealReason= $data['appeal_reason'] ?? null;
+        $appealReason = $data['appeal_reason'] ?? null;
         $datePosted  = Carbon::today()->toDateString();
 
         // 1. Working days + deduction
@@ -207,35 +246,27 @@ class LeaveFilingService
             ? 'For HR Verification'
             : null;
 
-        // 5. Store files before transaction (so path is available for remarks)
-        $appealFilePaths     = !empty($appealFiles)
-            ? $this->storeFiles($appealFiles, "{$employid}/appeals")
-            : [];
-        $attachmentFilePaths = !empty($attachmentFiles)
-            ? $this->storeFiles($attachmentFiles, "{$employid}/attachments")
-            : [];
-
-        // 6. Build remarks
-        $remarksLines = [];
-        if ($appealReason) {
-            $remarksLines[] = "Appeal reason: {$appealReason}";
-        }
-        if (!empty($appealFilePaths)) {
-            $remarksLines[] = 'Appeal files: ' . implode(', ', $appealFilePaths);
-        }
-        if (!empty($attachmentFilePaths)) {
-            $remarksLines[] = 'Attachments: ' . implode(', ', $attachmentFilePaths);
-        }
-        $remarks = !empty($remarksLines) ? implode(' | ', $remarksLines) : null;
-
-        // 7. Create request + deduct balance in one transaction
+        // 5. Create request + deduct balance in one transaction
         $duration     = ($data['duration'] ?? 'whole') === 'half' ? 'half day' : 'whole day';
 
         $leaveRequest = DB::transaction(function () use (
-            $employid, $leaveType, $dateStart, $dateEnd, $hoursPerDay, $duration,
-            $workingDays, $deductionMinutes, $reason, $status,
-            $adminRemark, $datePosted, $isLate, $requirements,
-            $balance, $paidMinutes, $appealReason, $remarks
+            $employid,
+            $leaveType,
+            $dateStart,
+            $dateEnd,
+            $hoursPerDay,
+            $duration,
+            $workingDays,
+            $deductionMinutes,
+            $reason,
+            $status,
+            $adminRemark,
+            $datePosted,
+            $isLate,
+            $requirements,
+            $balance,
+            $paidMinutes,
+            $unpaidMinutes
         ) {
             $request = $this->repo->createRequest([
                 'employid'          => $employid,
@@ -245,10 +276,11 @@ class LeaveFilingService
                 'hours_per_day'     => $hoursPerDay,
                 'working_days'      => $workingDays,
                 'deduction_minutes' => $deductionMinutes,
+                'paid_minutes'      => $paidMinutes,
+                'unpaid_minutes'    => $unpaidMinutes,
                 'reason'            => $reason,
                 'status'            => $status,
                 'admin_remarks'     => $adminRemark,
-                'remarks'           => $remarks,
                 'is_late_filing'    => $isLate ? 1 : 0,
                 'with_appeal'       => $requirements['require_appeal'] ? 1 : 0,
                 'appeal_status'     => $requirements['require_appeal'] ? 'pending' : 'none',
@@ -265,7 +297,15 @@ class LeaveFilingService
             return $request;
         });
 
-        // 8. Create approver chain (non-blocking — filing succeeds even if HRIS is down)
+        // 6. Save appeal / attachment files to their own tables (non-blocking)
+        if (!empty($appealFiles)) {
+            $this->saveAppealFiles($appealFiles, $leaveRequest->id, $employid, $appealReason);
+        }
+        if (!empty($attachmentFiles)) {
+            $this->saveAttachmentFiles($attachmentFiles, $leaveRequest->id, $employid);
+        }
+
+        // 7. Create approver chain (non-blocking — filing succeeds even if HRIS is down)
         if ($positionId !== self::AUTO_APPROVE_POSITION) {
             $this->createApprovers($leaveRequest->id, $employid, $requirements['require_appeal']);
         }

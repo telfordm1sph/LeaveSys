@@ -1,9 +1,9 @@
-// ── Date / time formatters ────────────────────────────────────────────────────
-
 export function fmtDate(d) {
     if (!d) return "—";
     return new Date(d + "T00:00:00").toLocaleDateString("en-PH", {
-        month: "short", day: "numeric", year: "numeric",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
     });
 }
 
@@ -16,33 +16,31 @@ export function fmtDateRange(start, end) {
 export function fmtMins(m) {
     const mins = parseInt(m, 10) || 0;
     const days = Math.floor(mins / 480);
-    const hrs  = ((mins % 480) / 60).toFixed(1);
+    const hrs = ((mins % 480) / 60).toFixed(1);
     if (days > 0) return +hrs > 0 ? `${days}d ${hrs}h` : `${days}d`;
     return `${hrs}h`;
 }
 
-// ── Status config ─────────────────────────────────────────────────────────────
-
 export const STATUS_CONFIG = {
     pending: {
-        label : "Pending",
-        cls   : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+        label: "Pending",
+        cls: "bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300",
     },
     partially_approved: {
-        label : "Partially Approved",
-        cls   : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+        label: "Partially Approved",
+        cls: "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300",
     },
     approved: {
-        label : "Approved",
-        cls   : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+        label: "Approved",
+        cls: "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300",
     },
     rejected: {
-        label : "Rejected",
-        cls   : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+        label: "Rejected",
+        cls: "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300",
     },
     cancelled: {
-        label : "Cancelled",
-        cls   : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+        label: "Cancelled",
+        cls: "bg-gray-50 text-gray-700 dark:bg-gray-950 dark:text-gray-300",
     },
 };
 

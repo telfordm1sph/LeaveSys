@@ -21,6 +21,7 @@ const ACTION_COLORS = {
 };
 
 function fmtMin(n) { return Number(n).toLocaleString(); }
+function fmtDays(mins) { return (Math.abs(mins) / 480).toFixed(2); }
 
 export default function Logs({ employid, name, logs, leaveTypes, filterType }) {
     function applyFilter(type) {
@@ -87,6 +88,7 @@ export default function Logs({ employid, name, logs, leaveTypes, filterType }) {
                                         <th className="px-4 py-3 whitespace-nowrap">Date</th>
                                         <th className="px-4 py-3">Type</th>
                                         <th className="px-4 py-3">Action</th>
+                                        <th className="px-4 py-3 whitespace-nowrap">Leave #</th>
                                         <th className="px-4 py-3 text-right">Before</th>
                                         <th className="px-4 py-3 text-right">Delta</th>
                                         <th className="px-4 py-3 text-right">After</th>
@@ -106,14 +108,38 @@ export default function Logs({ employid, name, logs, leaveTypes, filterType }) {
                                                     {l.action_type.replace(/_/g, " ")}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-2.5 tabular-nums text-right text-xs text-muted-foreground">
-                                                {fmtMin(l.minutes_before)}
+                                            <td className="px-4 py-2.5 text-xs">
+                                                {l.leave_request_id
+                                                    ? <span className="font-mono text-muted-foreground">#{l.leave_request_id}</span>
+                                                    : <span className="text-muted-foreground/40">—</span>
+                                                }
                                             </td>
-                                            <td className={`px-4 py-2.5 tabular-nums text-right text-xs font-semibold ${l.minutes_delta >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
-                                                {l.minutes_delta >= 0 ? "+" : ""}{fmtMin(l.minutes_delta)}
+                                            <td className="px-4 py-2.5 text-right leading-tight">
+                                                {l.minutes_before === 0
+                                                    ? <p className="text-xs text-muted-foreground/40 tabular-nums">—</p>
+                                                    : <>
+                                                        <p className="text-xs font-semibold tabular-nums">{fmtDays(l.minutes_before)}</p>
+                                                        <p className="text-[10px] text-muted-foreground tabular-nums">{fmtMin(l.minutes_before)} min</p>
+                                                      </>
+                                                }
                                             </td>
-                                            <td className="px-4 py-2.5 tabular-nums text-right text-xs font-bold">
-                                                {fmtMin(l.minutes_after)}
+                                            <td className={`px-4 py-2.5 text-right leading-tight ${l.minutes_delta >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
+                                                {l.minutes_delta === 0
+                                                    ? <p className="text-xs text-muted-foreground/40">—</p>
+                                                    : <>
+                                                        <p className="text-xs font-semibold tabular-nums">{l.minutes_delta > 0 ? "+" : "−"}{fmtDays(l.minutes_delta)}</p>
+                                                        <p className="text-[10px] opacity-70 tabular-nums">{l.minutes_delta > 0 ? "+" : "−"}{fmtMin(Math.abs(l.minutes_delta))} min</p>
+                                                      </>
+                                                }
+                                            </td>
+                                            <td className="px-4 py-2.5 text-right leading-tight">
+                                                {l.minutes_after === 0
+                                                    ? <p className="text-xs text-muted-foreground/40 tabular-nums">—</p>
+                                                    : <>
+                                                        <p className="text-xs font-bold tabular-nums">{fmtDays(l.minutes_after)}</p>
+                                                        <p className="text-[10px] text-muted-foreground tabular-nums">{fmtMin(l.minutes_after)} min</p>
+                                                      </>
+                                                }
                                             </td>
                                             <td className="px-4 py-2.5 text-xs text-muted-foreground max-w-[220px] truncate">
                                                 {l.remarks}

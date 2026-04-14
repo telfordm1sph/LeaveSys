@@ -1,6 +1,6 @@
 import StaffPageLayout from "./partials/StaffPageLayout";
 
-export default function StaffRequests({ pending, history, tab }) {
+export default function StaffRequests({ pending, history, tab, search }) {
     return (
         <StaffPageLayout
             title="Staff Leave Requests"
@@ -8,6 +8,7 @@ export default function StaffRequests({ pending, history, tab }) {
             pending={pending}
             history={history}
             tab={tab}
+            search={search}
         />
     );
 }

@@ -95,8 +95,13 @@ class LeaveFilingRepository
 
         if (!$balance) return;
 
+        $refundMinutes = max(0, $request->paid_minutes);
+        if ($refundMinutes === 0) {
+            return;
+        }
+
         $before = $balance->balance_minutes;
-        $after  = $before + $request->deduction_minutes;
+        $after  = $before + $refundMinutes;
 
         $balance->balance_minutes = $after;
         $balance->save();
@@ -104,9 +109,9 @@ class LeaveFilingRepository
         LeaveAccrualLog::create([
             'employid'         => $request->employid,
             'leave_type'       => $request->leave_type,
-            'action_type'      => 'adjustment',
+            'action_type'      => 'refund',
             'minutes_before'   => $before,
-            'minutes_delta'    => $request->deduction_minutes,
+            'minutes_delta'    => $refundMinutes,
             'minutes_after'    => $after,
             'leave_request_id' => $request->id,
             'remarks'          => "Leave #{$request->id} rejected — balance refunded",
