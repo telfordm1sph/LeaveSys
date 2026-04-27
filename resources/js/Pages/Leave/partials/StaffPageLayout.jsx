@@ -16,7 +16,7 @@ import {
     LeaveDetailsModal,
 } from "@/Components/Leave/ApprovalDialogs";
 import { Pagination } from "./RequestPageLayout";
-import { fmtDate, fmtMins } from "@/lib/leaveRequestUtils";
+import { fmtDate, fmtMins, fmtDateTime } from "@/lib/leaveRequestUtils";
 import { useRequestPage } from "../hooks/useRequestPage";
 
 // ── History table (past approver decisions) ───────────────────────────────────
@@ -113,7 +113,7 @@ function StaffHistoryTable({ rows = [], onRowClick }) {
                                 </p>
                             </td>
                             <td className="px-4 py-2.5 whitespace-nowrap text-xs text-muted-foreground">
-                                {fmtDate(r.my_decided_at)}
+                                {fmtDateTime(r.my_decided_at)}
                             </td>
                         </tr>
                     ))}
@@ -246,8 +246,14 @@ export default function StaffPageLayout({
             <LeaveDetailsModal
                 target={viewTarget}
                 onClose={() => setViewTarget(null)}
-                onApprove={(r) => { setViewTarget(null); setApproveTarget(r); }}
-                onReject={(r) => { setViewTarget(null); setRejectTarget(r); }}
+                onApprove={(r) => {
+                    setViewTarget(null);
+                    setApproveTarget(r);
+                }}
+                onReject={(r) => {
+                    setViewTarget(null);
+                    setRejectTarget(r);
+                }}
             />
             <ApproveDialog
                 target={approveTarget}

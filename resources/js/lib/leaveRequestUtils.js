@@ -13,6 +13,17 @@ export function fmtDateRange(start, end) {
     return `${fmtDate(start)} – ${fmtDate(end)}`;
 }
 
+export function fmtDateTime(d) {
+    if (!d) return "—";
+    return new Date(d).toLocaleString("en-PH", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+    });
+}
 export function fmtMins(m) {
     const mins = parseInt(m, 10) || 0;
     const days = Math.floor(mins / 480);
